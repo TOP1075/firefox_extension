@@ -6,3 +6,8 @@ A super simple Firefox extension to make two minor modifications to Firefox beha
 2. when opening multiple links - e.g. via highlighting a list of links in a spreadsheet then right-click > "Open links" - open them in from "top to bottom" (current behaviour is "bottom to top")
 
 This is also an initial attempt at a git-managed project.
+
+
+
+## manifest
+- consider using "permissions": ["activeTab"]," given the extension will be non-functional on non-active tabs
