@@ -1,0 +1,20 @@
+{
+    "manifest_version": 2,
+    "name": "Default Bookmarker",
+    "version": "1.0",
+
+    "description": "When using right-click > \"add bookmark\", populates the new bookmark window with default values using the current tab",
+
+    "icons": {
+      "48": "icons/icon_48.png",
+      "128": "icons/icon_128.png"
+    },
+
+    "content_scripts": [
+      {
+        "matches": ["*://*.mozilla.org/*"],
+        "js": ["bookmarker.js"]
+      }
+    ]
+  }
+
