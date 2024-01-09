@@ -7,32 +7,26 @@ browser.menus.create({
 // implement either onClicked listener - e.g. below - or use default action
 // onClicked listener preferred as no default action
 
-function bookmarker(tabs, pId) {
-    let tab = tabs[0]
+function bookmarker(info, tab) {
     console.log(`Tab is: ${tab}`)
-    
+
     // determine parentId - will need to use "type" to work out whether to use id or parentId as id.
+    let origin = browser.bookmarks.get(info.bookmarkId)
+    let type = origin.BookmarkTreeNodeType
+    console.log(`Origin is ${origin} and type is ${type}`) 
+    
+    let parent  
+    if (type === "folder") { // if folder, we can use bookmarkId directly
+       parent = info.bookmarkId
+    } else { // otherwise call parentId
+        parent = getParentId(info.bookmarkId)
+    } 
+
     // create bookmark details object, then create book mark [bookmark details are: parentId, title, url]
-    let details = {title: tab.title, url: tab.url, parentId: pId}   
+    let details = {title: tab.title, url: tab.url, parentId: parent}   
 
     let bookmark = browser.bookmarks.create(details)
     console.log(`Bookmark created ${bookmark}\n with details ${details}`)
-}
-
-function location(info) {
-
-    let origin = browser.bookmarks.get(info.bookmarkId)
-    let type = origin.BookmarkTreeNodeType
-    console.log(`Origin is ${origin} and type is ${type}`)
-    let pId
-    
-    if (type === "folder") { // if folder, we can use bookmarkId directly
-       pId = info.bookmarkId
-    } else { // otherwise call parentId
-        pId = getParentId(info.bookmarkId)
-    }
-
-    return pId
 }
 
 function getParentId(childId) {
@@ -49,13 +43,20 @@ function getParentId(childId) {
     return browser.bookmarks.getTree().then(findParentId, console.error)
 }
 
+function tabs_received(tabs){
+    console.log("Receive tabs")
+    return tabs
+}
+
 browser.menus.onClicked.addListener((info) => {
     console.log(info.bookmarkId)
-    let parentId = location(info)
+    let bookmarkinfo = info
     let queryObj = {currentWindow: true, active: true}
-    tabs = browser.tabs.query(queryObj).then(function(value) {
-        bookmarker(value, parentId)
+    browser.tabs.query(queryObj, function(tabs){
+        let tab = tabs[0]
+        bookmarker(bookmarkinfo, tab)
     })
+    
 });
 
 // going to need to use bookmarkId to locate where to place new bookmark:
