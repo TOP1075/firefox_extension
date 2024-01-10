@@ -7,59 +7,62 @@ browser.menus.create({
 // implement either onClicked listener - e.g. below - or use default action
 // onClicked listener preferred as no default action
 
-function bookmarker(info, tab) {
-    console.log(`Tab is: ${tab}`)
+function bookmarker(tabs, info) {
+    let tab = tabs[0]
+    console.log(`Tab is: ${tab.title}`)
 
     // determine parentId - will need to use "type" to work out whether to use id or parentId as id.
-    let origin = browser.bookmarks.get(info.bookmarkId)
-    let type = origin.BookmarkTreeNodeType
-    console.log(`Origin is ${origin} and type is ${type}`) 
-    
-    let parent  
-    if (type === "folder") { // if folder, we can use bookmarkId directly
-       parent = info.bookmarkId
-    } else { // otherwise call parentId
-        parent = getParentId(info.bookmarkId)
-    } 
+    browser.bookmarks.get(info.bookmarkId).then(origin => {
+        let type = origin[0].type
+        console.log(`Origin is ${origin[0].title} and type is ${type}`)
+
+        let parent  
+        if (type === "folder") { // if folder, we can use bookmarkId directly
+           parent = info.bookmarkId
+           console.log(`Type = folder, so we can use standard id, which here is ${parent} taken from ${info.bookmarkId}`)
+        } else {
+            parent = getParentId(info.bookmarkId)
+        }
+    })
 
     // create bookmark details object, then create book mark [bookmark details are: parentId, title, url]
-    let details = {title: tab.title, url: tab.url, parentId: parent}   
+    let details = {title: tab.title, url: tab.url, parentId: parent}
 
-    let bookmark = browser.bookmarks.create(details)
-    console.log(`Bookmark created ${bookmark}\n with details ${details}`)
+    browser.bookmarks.create(details).then(bookmark => {
+        console.log(`Bookmark created ${bookmark}\n with details ${details}`)
+    })
 }
+
+
+
+// get parent id needs to use the id of a bookmark find it's parent folder
+// to do this, recursively search through the tree
+// if an entity has children, for each child call this function, then check if the childId matches our target
+// if it matches, return the current node.id
 
 function getParentId(childId) {
+    browser.bookmarks.getTree().then(tree => { // NB getTree returns the ROOT NODE (i.e. the origin BookmarkTreeNode) - not the whole tree
+       return findChild(childId, tree)
+    })
+}
 
-    function findParentId(tree) {
-        for (node in tree) {
-            console.log(`Current node is ${node}`)
-            if (node.id == childId) {
-                return node.parentId 
+function findChild(target, node) {
+    if (node.children) {
+        for (const child of node.children) {
+            findChild(target, node)
+            if (child.id == target) {
+                return node.id
             }
         }
-        return console.error
+        
     }
-    return browser.bookmarks.getTree().then(findParentId, console.error)
 }
 
-function tabs_received(tabs){
-    console.log("Receive tabs")
-    return tabs
-}
-
-browser.menus.onClicked.addListener((info) => {
+browser.menus.onClicked.addListener((bookmarkInfo) => {
+    let info = bookmarkInfo
     console.log(info.bookmarkId)
-    let bookmarkinfo = info
     let queryObj = {currentWindow: true, active: true}
-    browser.tabs.query(queryObj, function(tabs){
-        let tab = tabs[0]
-        bookmarker(bookmarkinfo, tab)
-    })
-    
+    browser.tabs.query(queryObj)
+        .then(tabs => bookmarker(tabs, info))
+        .catch(error => console.error(error))
 });
-
-// going to need to use bookmarkId to locate where to place new bookmark:
-// (1) if id is for folder, place in folderxc
-// (2) if id is for bookmark, get parent folder and place there
-// (3) if "toolbar__" place on toolbar
